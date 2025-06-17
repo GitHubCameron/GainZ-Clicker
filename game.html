@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GainZ Clicker</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-glow: #00e5ff;
+            --secondary-glow: #ff40ff;
+            --event-glow: #00ffaa;
+            --danger-glow: #ff4444;
+            --background-dark: #0d1117;
+            --panel-color: rgba(23, 35, 59, 0.7);
+            --panel-border: rgba(0, 229, 255, 0.3);
+            --text-light: #f0f6fc;
+            --text-muted: #8b949e;
+            --font-title: 'Orbitron', sans-serif;
+            --font-mono: 'Share Tech Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-title);
+            background-color: var(--background-dark);
+            color: var(--text-light);
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.5s ease;
+        }
+        
+        #background-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.5;
+            transition: opacity 0.5s ease;
+        }
+
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 450px;
+            margin: 0 auto;
+            padding: 1rem;
+            position: relative;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            background-color: transparent;
+            transition: background-color 0.5s ease;
+        }
+
+        .app-header {
+            text-align: center;
+            padding-bottom: 1rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .game-title {
+            font-family: var(--font-title);
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary-glow);
+            text-shadow: 0 0 8px var(--primary-glow), 0 0 15px var(--primary-glow), 0 0 25px rgba(0, 229, 255, 0.5);
+            margin-bottom: 1.5rem;
+            letter-spacing: 2px;
+            transition: color 0.5s ease, text-shadow 0.5s ease;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .stat-item {
+            background-color: var(--panel-color);
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            border: 1px solid var(--panel-border);
+            clip-path: polygon(0 10px, 10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+            transition: box-shadow 0.3s ease, background-color 0.5s ease, border-color 0.5s ease;
+        }
+        .stat-item:hover {
+            box-shadow: 0 0 10px var(--panel-border);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-family: var(--font-title);
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-light);
+            text-shadow: 0 0 3px var(--text-light);
+        }
+
+        .view {
+            display: none;
+            flex-grow: 1;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1rem 0.5rem;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        .view.active-view { display: flex; }
+        .view::-webkit-scrollbar { width: 4px; }
+        .view::-webkit-scrollbar-track { background: transparent; }
+        .view::-webkit-scrollbar-thumb { background: var(--primary-glow); border-radius: 4px; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #game-area {
+            justify-content: space-between;
+        }
+
+        .exercise-selector {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        #exercise-select {
+            background-color: var(--panel-color);
+            color: var(--text-light);
+            border: 1px solid var(--panel-border);
+            border-radius: 5px;
+            padding: 0.5rem;
+            font-family: var(--font-title);
+            margin-top: 0.25rem;
+            text-align: center;
+            appearance: none;
+            transition: background-color 0.5s ease, border-color 0.5s ease;
+        }
+        
+        #clicker-zone {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        #clicker-container {
+            position: relative;
+            width: 220px;
+            height: 220px;
+        }
+        
+        #clicker-progress-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(var(--event-glow) 0%, transparent 0%);
+            transition: background 0.2s linear;
+        }
+
+        #clicker-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #20355f, #0f1a2e);
+            border: none;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.4), inset 0 2px 5px rgba(0, 229, 255, 0.3), inset 0 -2px 5px rgba(0,0,0,0.5);
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.1s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            animation: pulse-glow 3s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 20px rgba(0, 229, 255, 0.4), inset 0 2px 5px rgba(0, 229, 255, 0.3), inset 0 -2px 5px rgba(0,0,0,0.5); }
+            to { box-shadow: 0 0 35px rgba(0, 229, 255, 0.7), inset 0 2px 5px rgba(0, 229, 255, 0.4), inset 0 -2px 5px rgba(0,0,0,0.5); }
+        }
+
+        #clicker-button:active:not(:disabled) {
+            transform: scale(0.96);
+            animation: none;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.3), inset 0 2px 10px rgba(0, 229, 255, 0.5), inset 0 -2px 5px rgba(0,0,0,0.5);
+        }
+        #clicker-button:disabled {
+            background: #333;
+            box-shadow: none;
+            cursor: not-allowed;
+            animation: none;
+            filter: grayscale(80%);
+        }
+
+        .reps-text {
+            font-family: var(--font-title);
+            font-weight: 900;
+            font-size: 5rem;
+            line-height: 1;
+            text-shadow: 0 0 5px var(--primary-glow);
+            transition: text-shadow 0.5s ease;
+        }
+        .reps-label {
+            font-size: 1rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 2px;
+        }
+
+        #combo-meter {
+            position: absolute;
+            top: 20px;
+            font-family: var(--font-title);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--event-glow);
+            text-shadow: 0 0 5px var(--event-glow);
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s, color 0.5s ease, text-shadow 0.5s ease;
+        }
+        #combo-meter.visible {
+            opacity: 1;
+        }
+        
+        .helper-text {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            padding-top: 1rem;
+        }
+        
+        #effects-container {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 450px;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .floating-text {
+            position: absolute;
+            font-family: var(--font-title);
+            font-weight: 700;
+            font-size: 1.8rem;
+            animation: floatUp 1.2s ease-out forwards;
+            white-space: nowrap;
+        }
+
+        @keyframes floatUp {
+            to { transform: translateY(-100px); opacity: 0; }
+        }
+        
+        .shockwave {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid var(--primary-glow);
+            animation: shockwave-burst 0.5s ease-out forwards;
+            pointer-events: none;
+            transition: border-color 0.5s ease;
+        }
+
+        @keyframes shockwave-burst {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .shop-title {
+            text-align: center;
+            font-family: var(--font-title);
+            color: var(--secondary-glow);
+            text-shadow: 0 0 8px var(--secondary-glow);
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+            transition: color 0.5s ease, text-shadow 0.5s ease;
+        }
+        #shop-items-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .shop-item {
+            background-color: var(--panel-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid transparent;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            clip-path: polygon(0 10px, 10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+        }
+        .shop-item.unlocked { opacity: 1; }
+        .shop-item.unlocked:hover { border-color: var(--panel-border); }
+        .shop-item.permanent { border-left-color: var(--primary-glow); }
+        .shop-item.temporary { border-left-color: var(--event-glow); }
+        .shop-item.cosmetic { border-left-color: var(--secondary-glow); }
+        .shop-item.maxed { filter: grayscale(50%); border-left-color: var(--text-muted); }
+
+        .item-info h3 { font-size: 1.1rem; font-weight: 600; }
+        .item-info p { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; font-family: 'Share Tech Mono', monospace; }
+        .item-owned { font-size: 0.8rem; color: var(--primary-glow); font-weight: 600; margin-top: 4px; transition: color 0.5s ease; }
+        .unlock-req {
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            color: var(--danger-glow);
+            text-shadow: 0 0 4px var(--danger-glow);
+            margin-top: 4px;
+        }
+
+        .buy-button {
+            background-color: var(--panel-color);
+            color: var(--text-light);
+            border: 1px solid var(--panel-border);
+            font-family: var(--font-title);
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 120px;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+        .buy-button:hover:not(:disabled) {
+            background-color: var(--primary-glow);
+            border-color: var(--primary-glow);
+            color: var(--background-dark);
+            text-shadow: none;
+        }
+        .buy-button:disabled {
+            border-color: var(--text-muted);
+            color: var(--text-muted);
+            background-color: transparent;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        
+        .app-nav {
+            display: flex;
+            justify-content: space-around;
+            padding: 1rem 0 0.5rem 0;
+            border-top: 1px solid var(--panel-border);
+            margin-top: 1rem;
+            position: relative;
+            z-index: 10;
+            transition: border-color 0.5s ease;
+        }
+        .nav-button {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-title);
+            font-weight: 600;
+            font-size: 1.2rem;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .nav-button::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 3px;
+            background-color: var(--primary-glow);
+            transition: width 0.3s ease, background-color 0.5s ease, box-shadow 0.5s ease;
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+        .nav-button.active {
+            color: var(--text-light);
+        }
+        .nav-button.active::after {
+            width: 100%;
+        }
+
+        /* --- COSMETIC THEMES --- */
+        .cosmetic-carbon-fiber-plating .stat-item, .cosmetic-carbon-fiber-plating .shop-item, .cosmetic-carbon-fiber-plating #exercise-select, .cosmetic-carbon-fiber-plating .buy-button {
+            background-image: url('data:image/svg+xml,%3Csvg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%232c3a4f" fill-opacity="0.4" fill-rule="evenodd"%3E%3Cpath d="M5 0h1L0 6V5zM6 5v1H5z"/%3E%3C/g%3E%3C/svg%3E');
+        }
+        .cosmetic-crimson-core { --primary-glow: #ff1a1a; --panel-border: rgba(255, 26, 26, 0.4); --secondary-glow: #ff5050; }
+        .cosmetic-gold-standard { --primary-glow: #FFD700; --panel-border: #FFD700; --secondary-glow: #FFA500; --text-light: #FFF; --text-muted: #EEE8AA; }
+        .cosmetic-gold-standard .stat-item, .cosmetic-gold-standard .shop-item, .cosmetic-gold-standard #exercise-select { background-color: rgba(139, 101, 8, 0.4); }
+        .cosmetic-gold-standard #clicker-button { background: radial-gradient(circle, #DAA520, #B8860B); }
+        .cosmetic-holographic-interface { --panel-color: rgba(0, 170, 255, 0.1); backdrop-filter: blur(10px) brightness(1.2); }
+        .cosmetic-holographic-interface .stat-item, .cosmetic-holographic-interface .shop-item, .cosmetic-holographic-interface #exercise-select {
+            background-color: rgba(0, 170, 255, 0.15);
+            border: 1px solid rgba(0, 170, 255, 0.5);
+            animation: holo-glitch 5s infinite steps(1, end);
+        }
+        @keyframes holo-glitch { 2% { transform: translate(1px, -1px); } 4% { transform: translate(0, 0); } 80% { transform: translate(0,0); } 82% { transform: translate(-1px, 1px); } 84% { transform: translate(0,0); }}
+        .cosmetic-celestial-form #clicker-button {
+            background: url('data:image/svg+xml,%3Csvg width="100" height="100" xmlns="http://www.w3.org/2000/svg"%3E%3Cdefs%3E%3CradialGradient id="g" cx="50%25" cy="50%25" r="50%25"%3E%3Cstop offset="0%25" stop-color="%23000033"/%3E%3Cstop offset="100%25" stop-color="%23000000"/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect fill="url(%23g)" width="100" height="100"/%3E%3Ccircle cx="60" cy="20" r="2" fill="white"/%3E%3Ccircle cx="20" cy="30" r="1" fill="white"/%3E%3Ccircle cx="80" cy="70" r="3" fill="white"/%3E%3Ccircle cx="40" cy="80" r="1" fill="white"/%3E%3Ccircle cx="90" cy="50" r="2" fill="white"/%3E%3C/svg%3E'); 
+            background-size: cover; border-color: #00ffff; animation: rotate-celestial 50s linear infinite, pulse-glow 3s infinite alternate; 
+        }
+        @keyframes rotate-celestial { from { background-position: 0 0; } to { background-position: 400px 400px; } }
+        .cosmetic-celestial-form #background-canvas { opacity: 1; }
+        .cosmetic-living-nexus #app-container { animation: living-nexus-bg 15s infinite alternate; }
+        .cosmetic-living-nexus #clicker-button { animation: living-nexus-clicker 10s infinite alternate; }
+        .cosmetic-living-nexus { --primary-glow: #fff; --panel-border: #fff; }
+        @keyframes living-nexus-bg {
+            0% { background-color: rgba(255, 0, 255, 0.1); } 25% { background-color: rgba(0, 255, 255, 0.1); } 50% { background-color: rgba(0, 255, 170, 0.1); } 75% { background-color: rgba(255, 255, 0, 0.1); } 100% { background-color: rgba(255, 0, 255, 0.1); }
+        }
+        @keyframes living-nexus-clicker {
+            0% { background: radial-gradient(circle, #ff00ff, #00ffff, #00ffaa); } 50% { background: radial-gradient(circle, #00ffaa, #ffff00, #ff00ff); } 100% { background: radial-gradient(circle, #ff00ff, #00ffff, #00ffaa); }
+        }
+
+        /* --- MINIGAME STYLES --- */
+        .minigame-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            pointer-events: all;
+        }
+
+        .minigame-timer {
+            font-size: 2rem;
+            color: var(--danger-glow);
+            text-shadow: 0 0 10px var(--danger-glow);
+            margin-bottom: 1rem;
+        }
+
+        #fix-form-icon {
+            position: fixed;
+            z-index: 2001;
+            cursor: pointer;
+            width: 80px;
+            height: 80px;
+            background-color: var(--panel-color);
+            border: 2px solid var(--danger-glow);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: shake 0.5s infinite;
+            pointer-events: all;
+        }
+        
+        #fix-form-icon svg { width: 50px; height: 50px; fill: var(--danger-glow); }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        #rerack-weights-container {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        #weight-tree {
+            width: 100px;
+            height: 300px;
+            border-left: 5px solid var(--text-muted);
+            position: relative;
+        }
+        .weight-peg {
+            position: absolute;
+            left: 0;
+            width: 50px;
+            height: 5px;
+            background-color: var(--text-muted);
+        }
+        .weight-peg-1 { top: 50px; }
+        .weight-peg-2 { top: 150px; }
+        .weight-peg-3 { top: 250px; }
+
+        .weight-plates-source {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .weight-plate {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 900;
+            cursor: grab;
+            user-select: none;
+            position: relative;
+        }
+        .weight-plate.dragging { opacity: 0.5; cursor: grabbing; }
+
+        .plate-45 { background-color: #B22222; width: 80px; height: 80px;}
+        .plate-25 { background-color: #006400; width: 70px; height: 70px;}
+        .plate-10 { background-color: #4682B4; }
+        
+        .drop-zone {
+            position: absolute;
+            border: 2px dashed var(--panel-border);
+            border-radius: 50%;
+            left: 5px;
+        }
+        .drop-zone.hover { background-color: rgba(0, 229, 255, 0.2); }
+        
+        .drop-zone-45 { top: 10px; width: 80px; height: 80px; }
+        .drop-zone-25 { top: 115px; width: 70px; height: 70px; }
+        .drop-zone-10 { top: 220px; width: 60px; height: 60px; }
+
+        #minigame-result-modal {
+            position: fixed;
+            z-index: 3000;
+            width: 80%;
+            max-width: 350px;
+            background-color: var(--background-dark);
+            border: 2px solid var(--primary-glow);
+            padding: 2rem;
+            text-align: center;
+            border-radius: 10px;
+            box-shadow: 0 0 20px var(--primary-glow);
+            animation: fadeIn 0.3s ease;
+        }
+
+        #minigame-result-modal h2 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+        #minigame-result-modal p { font-size: 1rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+        #minigame-result-modal button { min-width: 150px; }
+    </style>
+</head>
+<body>
+    <canvas id="background-canvas"></canvas>
+
+    <div id="app-container">
+        <div id="effects-container"></div>
+        <div id="minigame-overlay-container"></div>
+
+        <header class="app-header">
+            <h1 class="game-title">GainZ Clicker</h1>
+            <div class="stats-container">
+                <div class="stat-item">
+                    <span class="stat-label">GAINS</span>
+                    <span id="gains-display" class="stat-value">0</span>
+                </div>
+                 <div class="stat-item">
+                    <span class="stat-label">GAINS/SEC</span>
+                    <span id="gps-display" class="stat-value">0</span>
+                </div>
+                 <div class="stat-item">
+                    <span class="stat-label">COMBO</span>
+                    <span id="combo-display" class="stat-value">0</span>
+                </div>
+            </div>
+        </header>
+
+        <main id="game-area" class="view active-view">
+            <div class="exercise-selector">
+                <select id="exercise-select"></select>
+            </div>
+
+            <div id="clicker-zone">
+                <div id="clicker-container">
+                    <div id="clicker-progress-ring"></div>
+                    <button id="clicker-button">
+                        <span id="combo-meter"></span>
+                        <span id="reps-display" class="reps-text">0</span>
+                        <span class="reps-label">REPS</span>
+                    </button>
+                </div>
+            </div>
+            <p class="helper-text">Stop clicking to reset combo.</p>
+        </main>
+
+        <section id="shop-area" class="view">
+            <h2 class="shop-title">THE GAINZ SHOP</h2>
+            <div id="shop-items-container"></div>
+             <div id="recalibrate-section" style="display: none; text-align: center; margin-top: 2rem; padding: 1rem; border: 1px solid var(--danger-glow); border-radius: 8px;">
+                <h3 style="color: var(--danger-glow);">HIT A PLATEAU?</h3>
+                <p style="color: var(--text-muted); margin: 0.5rem 0; font-family: var(--font-mono); font-size: 0.8rem;">Reset your progress to earn Prestige Points, giving a permanent boost to all future Gains. It's like starting a new bulk cycle, bro.</p>
+                <p>Prestige Points to gain: <span id="recalibrate-cores" style="font-family: var(--font-title);">0</span></p>
+                <button id="recalibrate-button" class="buy-button" style="border-color: var(--danger-glow); color: var(--danger-glow); margin-top: 1rem;">PRESTIGE</button>
+            </div>
+        </section>
+
+        <nav class="app-nav">
+            <button id="nav-game" class="nav-button active">LIFT</button>
+            <button id="nav-shop" class="nav-button">SHOP</button>
+        </nav>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('background-canvas');
+        const ctx = canvas.getContext('2d');
+        let gridSize = 30;
+        let dots = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            dots = [];
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                for (let y = 0; y < canvas.height; y += gridSize) {
+                    dots.push({ x: x, y: y, originalX: x, originalY: y, opacity: Math.random() * 0.5 });
+                }
+            }
+        }
+        
+        let mouse = { x: null, y: null, radius: 150 };
+        window.addEventListener('mousemove', e => { mouse.x = e.x; mouse.y = e.y; });
+        window.addEventListener('mouseout', () => { mouse.x = null; mouse.y = null; });
+
+        function drawGrid() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            dots.forEach(dot => {
+                let dx = mouse.x - dot.x;
+                let dy = mouse.y - dot.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                let force = (mouse.radius - distance) / mouse.radius;
+                if (force < 0) force = 0;
+                let directionX = (dx / distance) * force * gridSize * 0.5;
+                let directionY = (dy / distance) * force * gridSize * 0.5;
+
+                if (distance < mouse.radius) {
+                    dot.x -= directionX;
+                    dot.y -= directionY;
+                } else {
+                    if (dot.x !== dot.originalX) dot.x -= (dot.x - dot.originalX) / 10;
+                    if (dot.y !== dot.originalY) dot.y -= (dot.y - dot.originalY) / 10;
+                }
+                ctx.beginPath();
+                ctx.arc(dot.x, dot.y, 1.5, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(0, 229, 255, ${dot.opacity})`;
+                ctx.fill();
+            });
+            requestAnimationFrame(drawGrid);
+        }
+        resizeCanvas();
+        drawGrid();
+        window.addEventListener('resize', resizeCanvas);
+
+        const DOM = {
+            appContainer: document.getElementById('app-container'),
+            gainsDisplay: document.getElementById('gains-display'),
+            gpsDisplay: document.getElementById('gps-display'),
+            comboDisplay: document.getElementById('combo-display'),
+            repsDisplay: document.getElementById('reps-display'),
+            clickerButton: document.getElementById('clicker-button'),
+            clickerProgressRing: document.getElementById('clicker-progress-ring'),
+            exerciseSelect: document.getElementById('exercise-select'),
+            effectsContainer: document.getElementById('effects-container'),
+            minigameOverlayContainer: document.getElementById('minigame-overlay-container'),
+            shopItemsContainer: document.getElementById('shop-items-container'),
+            gameArea: document.getElementById('game-area'),
+            shopArea: document.getElementById('shop-area'),
+            navGame: document.getElementById('nav-game'),
+            navShop: document.getElementById('nav-shop'),
+            recalibrateButton: document.getElementById('recalibrate-button'),
+            comboMeter: document.getElementById('combo-meter'),
+        };
+
+        const CONFIG = {
+            EXERCISES: { curls: { name: 'Bicep Curls' }, bench: { name: 'Bench Press' }, squats: { name: 'Heavy Squats' } },
+            SHOP_ITEMS: {
+                liftingGrips: { name: 'Lifting Grips', desc: '+1 Gain per click. Solid grip, bro.', baseCost: 50, scale: 1.15, maxLevel: -1, type: 'permanent', unlock: 0, effect: s => s.clickPower++ },
+                newGymShoes: { name: 'New Gym Shoes', desc: '+2 Gains per click. For better footing, obviously.', baseCost: 150, scale: 1.18, maxLevel: -1, type: 'permanent', unlock: 100, effect: s => s.clickPower += 2 },
+                spotterBro: { name: 'Spotter Bro', desc: '+1 Gain per second. He yells "LIGHT WEIGHT!"', baseCost: 100, scale: 1.2, maxLevel: -1, type: 'permanent', unlock: 50, effect: s => s.gps++ },
+                proteinPowder: { name: 'Protein Powder', desc: '+2 Gains per second. Gotta get those macros in.', baseCost: 300, scale: 1.25, maxLevel: -1, type: 'permanent', unlock: 200, effect: s => s.gps += 2 },
+                preWorkout: { name: 'Pre-Workout', desc: 'Combo multiplier +5%. Tingles mean it\'s working.', baseCost: 2500, scale: 2.2, maxLevel: 10, type: 'permanent', unlock: 1000, effect: s => s.comboBonusMultiplier += 0.05 },
+                weightBelt: { name: 'Weight Belt', desc: 'Critical Gain chance +0.2%. Protect that back!', baseCost: 1e6, scale: 5, maxLevel: 20, type: 'permanent', unlock: 5e5, effect: s => s.critChance += 0.002 },
+                superSet: { name: 'Super Set Synergy', desc: 'Clicks also grant +1% of your GPS. No rest!', baseCost: 1e8, scale: 15, maxLevel: -1, type: 'permanent', unlock: 1e7, effect: s => s.gpsBonusPerClick += 0.01 },
+                mindMuscle: { name: 'Mind-Muscle Connection', desc: 'Critical Gain damage +25%. Think about the muscle!', baseCost: 1e10, scale: 2.5, maxLevel: 20, type: 'permanent', unlock: 1e9, effect: s => s.critMultiplier += 0.25 },
+                creatineRush: { name: 'Creatine Rush', desc: 'Double Gains per click for 60s. HYDRATE!', cost: 5000, type: 'temporary', unlock: 1000, effect: applyTempBoost(2, 60000) },
+                ammoniaWhiff: { name: 'Ammonia Whiff', desc: '5x Gains per click for 10s. WAKE UP!', cost: 25000, type: 'temporary', unlock: 10000, effect: applyTempBoost(5, 10000) },
+                cosmeticCarbonFiberPlating: { name: 'Carbon Fiber Plating', desc: 'Equip a sleek, dark carbon fiber UI theme.', cost: 5e8, type: 'cosmetic', unlock: 1e8, maxLevel: 1 },
+                cosmeticCrimsonCore: { name: 'Crimson Core', desc: 'Overload your UI with a crimson energy theme.', cost: 1e9, type: 'cosmetic', unlock: 5e8, maxLevel: 1 },
+                cosmeticGoldStandard: { name: 'Gold Standard', desc: 'Plate everything in luxurious gold.', cost: 8e10, type: 'cosmetic', unlock: 1e10, maxLevel: 1 },
+                cosmeticHolographicInterface: { name: 'Holographic Interface', desc: 'Upgrade to a glitchy, holographic UI.', cost: 5e11, type: 'cosmetic', unlock: 8e10, maxLevel: 1 },
+                cosmeticCelestialForm: { name: 'Celestial Form', desc: 'Become one with the cosmos. A starry theme.', cost: 1e12, type: 'cosmetic', unlock: 5e11, maxLevel: 1 },
+                cosmeticLivingNexus: { name: 'Living Nexus', desc: 'The ultimate theme. Your UI becomes sentient.', cost: 1e15, type: 'cosmetic', unlock: 1e14, maxLevel: 1 },
+            }
+        };
+
+        let state = {
+            gains: 0, totalGains: 0, currentReps: 0, clickPower: 1, gps: 0, tempMultiplier: 1, owned: {}, comboCount: 0, lastClickTimestamp: 0,
+            comboBonusMultiplier: 1.0, critChance: 0, critMultiplier: 5, gpsBonusPerClick: 0, prestigePoints: 0, prestigeBoost: 1.0,
+        };
+        
+        let minigame = { isActive: false, type: null, timeout: null, interval: null, cooldown: 0 };
+        let timers = { gpsInterval: null, comboTimeout: null, minigameInterval: null };
+
+        function formatNumber(num) {
+            if (num < 1e3) return num.toFixed(0);
+            const suffixes = ["", "K", "M", "B", "T", "Qa"];
+            const i = Math.floor(Math.log10(num) / 3);
+            return (num / Math.pow(1000, i)).toFixed(2) + suffixes[i];
+        }
+
+        function updateUI() {
+            DOM.gainsDisplay.textContent = formatNumber(state.gains);
+            DOM.gpsDisplay.textContent = formatNumber(state.gps * state.tempMultiplier * state.prestigeBoost);
+            DOM.repsDisplay.textContent = state.currentReps;
+            DOM.comboDisplay.textContent = state.comboCount;
+            const comboBonus = 1 + (Math.floor(state.comboCount / 10) * 0.1 * state.comboBonusMultiplier);
+            DOM.comboMeter.textContent = state.comboCount > 0 ? `x${comboBonus.toFixed(1)}` : '';
+            DOM.comboMeter.classList.toggle('visible', state.comboCount > 0);
+
+            const recalibrateSection = document.getElementById('recalibrate-section');
+            if (state.totalGains >= 1e9) {
+                recalibrateSection.style.display = 'block';
+                const coresToGain = Math.floor(Math.cbrt(state.totalGains / 1e9));
+                document.getElementById('recalibrate-cores').textContent = coresToGain;
+            } else {
+                recalibrateSection.style.display = 'none';
+            }
+
+            for (const id in CONFIG.SHOP_ITEMS) {
+                const button = document.querySelector(`.buy-button[data-id="${id}"]`);
+                if (!button) continue;
+                const item = CONFIG.SHOP_ITEMS[id];
+                const cost = calculateCost(id);
+                const isUnlocked = state.totalGains >= item.unlock;
+                const isMaxed = (item.maxLevel > 0 && (state.owned[id] || 0) >= item.maxLevel);
+                button.disabled = (state.gains < cost) || isMaxed || !isUnlocked;
+                if (!isUnlocked) { button.textContent = "LOCKED"; } 
+                else { button.textContent = isMaxed ? "MAXED" : formatNumber(cost); }
+                if (item.type === 'cosmetic' && isMaxed) button.textContent = "EQUIPPED";
+            }
+            let appliedCosmetic = '';
+            const itemIds = Object.keys(CONFIG.SHOP_ITEMS).reverse();
+            for (const id of itemIds) {
+                if (id.startsWith('cosmetic') && state.owned[id] > 0) {
+                     appliedCosmetic = id.replace(/([A-Z])/g, '-$1').toLowerCase();
+                     break;
+                }
+            }
+            DOM.appContainer.className = appliedCosmetic;
+        }
+
+        function handleClick() {
+            if (minigame.isActive) return;
+            const rect = DOM.clickerButton.getBoundingClientRect();
+            const clickX = rect.left + rect.width / 2;
+            const clickY = rect.top + rect.height / 2;
+            clearTimeout(timers.comboTimeout);
+            state.comboCount++;
+            timers.comboTimeout = setTimeout(resetCombo, 1500);
+            const comboBonus = 1 + (Math.floor(state.comboCount / 10) * 0.1 * state.comboBonusMultiplier);
+            let clickValue = state.clickPower + (state.gps * state.gpsBonusPerClick);
+            let gainsGained = clickValue * state.tempMultiplier * comboBonus * state.prestigeBoost;
+            let isCrit = Math.random() < state.critChance;
+            if (isCrit) { gainsGained *= state.critMultiplier; }
+            state.gains += gainsGained;
+            state.totalGains += gainsGained;
+            state.currentReps++;
+            createVisualEffect(clickX, clickY, isCrit ? `CRITICAL GAIN! +${formatNumber(gainsGained)}` : `+${formatNumber(gainsGained)}`, isCrit ? 'var(--danger-glow)' : null, isCrit ? '2.5rem' : null);
+            createVisualEffect(clickX, clickY, null, null, null, 'shockwave');
+            updateComboRing();
+            updateUI();
+        }
+
+        function resetCombo() {
+            state.comboCount = 0;
+            state.currentReps = 0; // BUG FIX: Reset reps with combo
+            updateComboRing();
+            updateUI();
+        }
+        
+        function updateComboRing() {
+            DOM.clickerProgressRing.style.transition = state.comboCount === 0 ? 'background 0.2s linear' : 'background 1.5s linear';
+            const angle = state.comboCount === 0 ? 0 : 360;
+            DOM.clickerProgressRing.style.background = `conic-gradient(var(--event-glow) ${angle}deg, transparent ${angle}deg)`;
+            if (state.comboCount > 0) {
+                void DOM.clickerProgressRing.offsetWidth;
+                DOM.clickerProgressRing.style.background = `conic-gradient(var(--event-glow) 0deg, transparent 0deg)`;
+            }
+        }
+        
+        function calculateCost(id) {
+            const item = CONFIG.SHOP_ITEMS[id];
+            if (item.type === 'temporary' || item.type === 'cosmetic') return item.cost;
+            return Math.ceil(item.baseCost * Math.pow(item.scale, state.owned[id] || 0));
+        }
+
+        function buyItem(id) {
+            const item = CONFIG.SHOP_ITEMS[id];
+            const cost = calculateCost(id);
+            const isUnlocked = state.totalGains >= item.unlock;
+            const isMaxed = item.maxLevel > 0 && (state.owned[id] || 0) >= item.maxLevel;
+            if (state.gains >= cost && !isMaxed && isUnlocked) {
+                state.gains -= cost;
+                state.owned[id] = (state.owned[id] || 0) + 1;
+                if (item.effect) {
+                    item.effect(state);
+                }
+                renderShop();
+                updateUI(); // BUG FIX: Ensure UI updates immediately after purchase
+            }
+        }
+
+        function createVisualEffect(x, y, text, color, size, type) {
+            const el = document.createElement('div');
+            if (type === 'shockwave') {
+                el.className = 'shockwave';
+                el.style.left = `${x - 25}px`; el.style.top = `${y - 25}px`;
+                el.style.width = '50px'; el.style.height = '50px';
+            } else {
+                el.className = 'floating-text';
+                el.textContent = text;
+                el.style.color = color || 'var(--primary-glow)';
+                el.style.textShadow = `0 0 5px ${color || 'var(--primary-glow)'}`;
+                el.style.fontSize = size || '1.8rem';
+                el.style.left = `${x + (Math.random() - 0.5) * 40}px`;
+                el.style.top = `${y + (Math.random() - 0.5) * 40 - 30}px`;
+            }
+            DOM.effectsContainer.appendChild(el);
+            el.addEventListener('animationend', () => el.remove());
+        }
+
+        function triggerRandomMinigame() {
+            if (minigame.isActive || minigame.cooldown > 0) return;
+            minigame.cooldown = 30;
+            const roll = Math.random();
+            if (roll < 0.3) startFixFormMinigame();
+            else if (roll < 0.6) startRerackWeightsMinigame();
+        }
+
+        function startFixFormMinigame() {
+            minigame.isActive = true;
+            minigame.type = 'fixForm';
+            
+            const icon = document.createElement('div');
+            icon.id = 'fix-form-icon';
+            icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.57,14.86L22,13.43L20.57,12L17,15.57L18.43,17L20.57,14.86M12,18A2,2 0 0,0 14,20A2,2 0 0,0 16,18C16,17.38 15.69,16.82 15.23,16.47L12,13.24L8.77,16.47C8.31,16.82 8,17.38 8,18A2,2 0 0,0 10,20A2,2 0 0,0 12,18M13.43,2L12,3.43L13.43,4.86L17,1.43L15.57,0L13.43,2M4.86,13.43L3.43,12L2,13.43L5.57,17L7,15.57L4.86,13.43M18,8A2,2 0 0,0 20,6A2,2 0 0,0 18,4C17.38,4 16.82,4.31 16.47,4.77L13.24,8L16.47,11.23C16.82,11.69 17.38,12 18,12A2,2 0 0,0 20,10A2,2 0 0,0 18,8M6,4A2,2 0 0,0 4,6A2,2 0 0,0 6,8C6.62,8 7.18,7.69 7.53,7.23L10.76,4L7.53,0.77C7.18,0.31 6.62,0 6,0A2,2 0 0,0 4,2A2,2 0 0,0 6,4Z" /></svg>`;
+            
+            const gameAreaRect = DOM.gameArea.getBoundingClientRect();
+            icon.style.top = `${gameAreaRect.top + Math.random() * (gameAreaRect.height - 80)}px`;
+            icon.style.left = `${gameAreaRect.left + Math.random() * (gameAreaRect.width - 80)}px`;
+            
+            icon.onclick = () => {
+                clearTimeout(minigame.timeout);
+                endFixFormMinigame(true);
+            };
+
+            DOM.minigameOverlayContainer.appendChild(icon);
+            minigame.timeout = setTimeout(() => endFixFormMinigame(false), 3000);
+        }
+
+        function endFixFormMinigame(success) {
+            DOM.minigameOverlayContainer.innerHTML = '';
+            minigame.isActive = false;
+            let title, message;
+            if (success) {
+                title = "PERFECT FORM!";
+                message = "You corrected your form! Enjoy 100% crit chance for 10 seconds!";
+                const oldCritChance = state.critChance;
+                state.critChance = 1;
+                setTimeout(() => { state.critChance = oldCritChance; }, 10000);
+            } else {
+                title = "Bad Form!";
+                message = "You missed your chance. Focus up!";
+            }
+            showResultModal(title, message);
+        }
+
+        function startRerackWeightsMinigame() {
+            minigame.isActive = true;
+            minigame.type = 'rerack';
+
+            const overlay = document.createElement('div');
+            overlay.className = 'minigame-overlay';
+            overlay.innerHTML = `
+                <div class="minigame-timer" id="rerack-timer">10</div>
+                <div id="rerack-weights-container">
+                    <div class="weight-plates-source">
+                        <div class="weight-plate plate-10" draggable="true" data-weight="10">10</div>
+                        <div class="weight-plate plate-45" draggable="true" data-weight="45">45</div>
+                        <div class="weight-plate plate-25" draggable="true" data-weight="25">25</div>
+                    </div>
+                    <div id="weight-tree">
+                        <div class="weight-peg weight-peg-1"></div>
+                        <div class="drop-zone drop-zone-45" data-target="45"></div>
+                        <div class="weight-peg weight-peg-2"></div>
+                        <div class="drop-zone drop-zone-25" data-target="25"></div>
+                        <div class="weight-peg weight-peg-3"></div>
+                        <div class="drop-zone drop-zone-10" data-target="10"></div>
+                    </div>
+                </div>`;
+            DOM.minigameOverlayContainer.appendChild(overlay);
+
+            let timeLeft = 10;
+            const timerEl = document.getElementById('rerack-timer');
+            minigame.interval = setInterval(() => {
+                timeLeft--;
+                timerEl.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(minigame.interval);
+                    endRerackWeightsMinigame(false);
+                }
+            }, 1000);
+            
+            setupDragAndDrop();
+        }
+
+        function endRerackWeightsMinigame(success) {
+            clearInterval(minigame.interval);
+            DOM.minigameOverlayContainer.innerHTML = '';
+            minigame.isActive = false;
+            let title, message;
+            if (success) {
+                title = "GYM ETIQUETTE 101";
+                const reward = state.gps * 1800;
+                state.gains += reward;
+                message = `You reracked the weights like a pro! Gained ${formatNumber(reward)}!`;
+            } else {
+                title = "Sloppy!";
+                message = "You left the weights on the floor! No bonus gains.";
+            }
+            showResultModal(title, message);
+        }
+
+        function setupDragAndDrop() {
+            const plates = document.querySelectorAll('.weight-plate');
+            const dropZones = document.querySelectorAll('.drop-zone');
+            let draggedItem = null;
+            let correctPlacements = 0;
+
+            plates.forEach(plate => {
+                plate.addEventListener('dragstart', e => {
+                    draggedItem = e.target;
+                    setTimeout(() => e.target.classList.add('dragging'), 0);
+                });
+                plate.addEventListener('dragend', () => {
+                    draggedItem.classList.remove('dragging');
+                    draggedItem = null;
+                });
+            });
+
+            dropZones.forEach(zone => {
+                zone.addEventListener('dragover', e => e.preventDefault());
+                zone.addEventListener('dragenter', e => { e.preventDefault(); e.target.classList.add('hover'); });
+                zone.addEventListener('dragleave', e => e.target.classList.remove('hover'));
+                zone.addEventListener('drop', e => {
+                    e.target.classList.remove('hover');
+                    if (draggedItem && e.target.dataset.target === draggedItem.dataset.weight) {
+                        e.target.appendChild(draggedItem);
+                        draggedItem.style.position = 'absolute';
+                        draggedItem.style.top = '0';
+                        draggedItem.style.left = '0';
+                        draggedItem.setAttribute('draggable', 'false');
+                        correctPlacements++;
+                        if (correctPlacements === 3) {
+                            endRerackWeightsMinigame(true);
+                        }
+                    }
+                });
+            });
+        }
+        
+        function showResultModal(title, message) {
+            const modal = document.createElement('div');
+            modal.id = 'minigame-result-modal';
+            modal.innerHTML = `
+                <h2 style="color: var(--${title.includes('!') ? 'danger' : 'primary'}-glow);">${title}</h2>
+                <p>${message}</p>
+                <button class="buy-button">Awesome</button>
+            `;
+            DOM.minigameOverlayContainer.appendChild(modal);
+            modal.querySelector('button').onclick = () => {
+                DOM.minigameOverlayContainer.innerHTML = '';
+            };
+        }
+
+        function applyTempBoost(multiplier, duration) {
+            return (state) => {
+                const originalMultiplier = state.tempMultiplier;
+                state.tempMultiplier *= multiplier;
+                setTimeout(() => { state.tempMultiplier = originalMultiplier; updateUI(); }, duration);
+                updateUI();
+            };
+        }
+        
+        function renderShop() {
+            DOM.shopItemsContainer.innerHTML = '';
+            for (const id in CONFIG.SHOP_ITEMS) {
+                const item = CONFIG.SHOP_ITEMS[id];
+                const isUnlocked = state.totalGains >= item.unlock;
+
+                const itemEl = document.createElement('div');
+                itemEl.className = `shop-item ${item.type}`;
+                if (isUnlocked) {
+                    itemEl.classList.add('unlocked');
+                }
+                
+                const level = state.owned[id] || 0;
+                const isMaxed = item.maxLevel > 0 && level >= item.maxLevel;
+                if (isMaxed) {
+                    itemEl.classList.add('maxed');
+                }
+
+                let ownedText = '';
+                if (item.type === 'permanent') {
+                    ownedText = `<div class="item-owned">LVL: ${level}${item.maxLevel > 0 ? ` / ${item.maxLevel}` : ''}</div>`;
+                } else if (item.type === 'cosmetic' && level > 0) {
+                     ownedText = ``; 
+                }
+
+                let lockInfo = '';
+                if (!isUnlocked) {
+                    lockInfo = `<div class="unlock-req">UNLOCKS AT ${formatNumber(item.unlock)} GAINS</div>`;
+                }
+
+                itemEl.innerHTML = `
+                    <div class="item-info">
+                        <h3>${item.name}</h3>
+                        <p>${item.desc}</p>
+                        ${ownedText}
+                        ${lockInfo}
+                    </div>
+                    <button class="buy-button" data-id="${id}"></button>
+                `;
+                DOM.shopItemsContainer.appendChild(itemEl);
+            }
+            updateUI();
+        }
+
+        function init() {
+            for (const key in CONFIG.EXERCISES) {
+                const option = document.createElement('option');
+                option.value = key; option.textContent = CONFIG.EXERCISES[key].name;
+                DOM.exerciseSelect.appendChild(option);
+            }
+            renderShop();
+            timers.gpsInterval = setInterval(() => {
+                const gainsGained = state.gps * state.tempMultiplier * state.prestigeBoost;
+                if (gainsGained > 0) {
+                    state.gains += gainsGained;
+                    state.totalGains += gainsGained;
+                }
+                if (minigame.cooldown > 0) minigame.cooldown--;
+                updateUI();
+            }, 1000);
+            timers.minigameInterval = setInterval(triggerRandomMinigame, 20000); // Check every 20 seconds for demo
+            DOM.clickerButton.addEventListener('mousedown', handleClick);
+            DOM.navGame.addEventListener('click', () => { DOM.gameArea.classList.add('active-view'); DOM.shopArea.classList.remove('active-view'); DOM.navGame.classList.add('active'); DOM.navShop.classList.remove('active'); });
+            DOM.navShop.addEventListener('click', () => { DOM.gameArea.classList.remove('active-view'); DOM.shopArea.classList.add('active-view'); DOM.navGame.classList.remove('active'); DOM.navShop.classList.add('active'); renderShop(); });
+            DOM.shopItemsContainer.addEventListener('click', e => { if (e.target.matches('.buy-button')) { buyItem(e.target.dataset.id); }});
+            DOM.recalibrateButton.addEventListener('click', () => {
+                 const coresToGain = Math.floor(Math.cbrt(state.totalGains / 1e9));
+                 if (coresToGain < 1) return;
+                 if (window.confirm(`Are you sure you want to Prestige for ${coresToGain} Prestige Points?`)) {
+                    state.prestigePoints += coresToGain;
+                    state.prestigeBoost = 1 + (state.prestigePoints * 0.1);
+                    const cosmeticState = {};
+                    for (const id in state.owned) { if (id.startsWith('cosmetic')) cosmeticState[id] = 1; }
+                    Object.assign(state, { gains: 0, totalGains: 0, currentReps: 0, clickPower: 1, gps: 0, comboCount: 0, critChance: 0, comboBonusMultiplier: 1.0, gpsBonusPerClick: 0, owned: cosmeticState });
+                    renderShop(); 
+                    updateUI();
+                 }
+            });
+            updateUI();
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>
