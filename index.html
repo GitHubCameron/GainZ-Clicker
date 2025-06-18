@@ -42,7 +42,7 @@
             user-select: none;
             -webkit-tap-highlight-color: transparent;
             transition: background-color 0.5s ease;
-touch-action: manipulation;
+            touch-action: manipulation;
         }
         
         #background-canvas {
@@ -90,7 +90,7 @@ touch-action: manipulation;
 
         .stats-container {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 0.75rem;
         }
 
@@ -241,21 +241,6 @@ touch-action: manipulation;
             color: var(--text-muted);
             font-weight: 500;
             letter-spacing: 2px;
-        }
-
-        #combo-meter {
-            position: absolute;
-            top: 20px;
-            font-family: var(--font-title);
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--event-glow);
-            text-shadow: 0 0 5px var(--event-glow);
-            opacity: 0;
-            transition: opacity 0.3s, transform 0.3s, color 0.5s ease, text-shadow 0.5s ease;
-        }
-        #combo-meter.visible {
-            opacity: 1;
         }
         
         .helper-text {
@@ -596,10 +581,6 @@ touch-action: manipulation;
                     <span class="stat-label">GAINS/SEC</span>
                     <span id="gps-display" class="stat-value">0</span>
                 </div>
-                 <div class="stat-item">
-                    <span class="stat-label">COMBO</span>
-                    <span id="combo-display" class="stat-value">0</span>
-                </div>
             </div>
         </header>
 
@@ -612,13 +593,12 @@ touch-action: manipulation;
                 <div id="clicker-container">
                     <div id="clicker-progress-ring"></div>
                     <button id="clicker-button">
-                        <span id="combo-meter"></span>
-                        <span id="reps-display" class="reps-text">0</span>
-                        <span class="reps-label">REPS</span>
+                        <span id="reps-display" class="reps-text">GO</span>
+                        <span id="reps-label" class="reps-label">START SET</span>
                     </button>
                 </div>
             </div>
-            <p class="helper-text">Stop clicking to reset combo.</p>
+            <p class="helper-text">Click the button to start your set.</p>
         </main>
 
         <section id="shop-area" class="view">
@@ -695,8 +675,8 @@ touch-action: manipulation;
             appContainer: document.getElementById('app-container'),
             gainsDisplay: document.getElementById('gains-display'),
             gpsDisplay: document.getElementById('gps-display'),
-            comboDisplay: document.getElementById('combo-display'),
             repsDisplay: document.getElementById('reps-display'),
+            repsLabel: document.querySelector('.reps-label'),
             clickerButton: document.getElementById('clicker-button'),
             clickerProgressRing: document.getElementById('clicker-progress-ring'),
             exerciseSelect: document.getElementById('exercise-select'),
@@ -708,22 +688,33 @@ touch-action: manipulation;
             navGame: document.getElementById('nav-game'),
             navShop: document.getElementById('nav-shop'),
             recalibrateButton: document.getElementById('recalibrate-button'),
-            comboMeter: document.getElementById('combo-meter'),
+            helperText: document.querySelector('.helper-text'),
         };
 
         const CONFIG = {
-            EXERCISES: { curls: { name: 'Bicep Curls' }, bench: { name: 'Bench Press' }, squats: { name: 'Heavy Squats' } },
+            EXERCISES: {
+                bench: { 
+                    name: 'Bench Press',
+                    type: 'timed_taps',
+                    duration: 10000, // 10 seconds
+                    tiers: [
+                        { reps: 31, label: 'SUPERSET', multiplier: 2, color: 'var(--event-glow)'},
+                        { reps: 16, label: 'SOLID', multiplier: 1, color: 'var(--primary-glow)' },
+                        { reps: 0, label: 'BAD FORM', multiplier: 0, color: 'var(--danger-glow)' }
+                    ]
+                },
+                curls: { name: 'Bicep Curls', type: 'inactive' }, 
+                squats: { name: 'Heavy Squats', type: 'inactive' } 
+            },
             SHOP_ITEMS: {
-                liftingGrips: { name: 'Lifting Grips', desc: '+1 Gain per click. Solid grip, bro.', baseCost: 50, scale: 1.15, maxLevel: -1, type: 'permanent', unlock: 0, effect: s => s.clickPower++ },
-                newGymShoes: { name: 'New Gym Shoes', desc: '+2 Gains per click. For better footing, obviously.', baseCost: 150, scale: 1.18, maxLevel: -1, type: 'permanent', unlock: 100, effect: s => s.clickPower += 2 },
-                spotterBro: { name: 'Spotter Bro', desc: '+1 Gain per second. He yells "LIGHT WEIGHT!"', baseCost: 100, scale: 1.2, maxLevel: -1, type: 'permanent', unlock: 50, effect: s => s.gps++ },
+                liftingGrips: { name: 'Lifting Grips', desc: 'Increases base Gains from Solid sets by 1.', baseCost: 50, scale: 1.5, maxLevel: -1, type: 'permanent', unlock: 10, effect: s => s.baseReward++ },
+                newGymShoes: { name: 'New Gym Shoes', desc: 'Increases base Gains from Solid sets by 2.', baseCost: 150, scale: 1.8, maxLevel: -1, type: 'permanent', unlock: 100, effect: s => s.baseReward += 2 },
+                spotterBro: { name: 'Spotter Bro', desc: '+1 Gain per second. He yells "LIGHT WEIGHT!"', baseCost: 100, scale: 1.2, maxLevel: -1, type: 'permanent', unlock: 25, effect: s => s.gps++ },
                 proteinPowder: { name: 'Protein Powder', desc: '+2 Gains per second. Gotta get those macros in.', baseCost: 300, scale: 1.25, maxLevel: -1, type: 'permanent', unlock: 200, effect: s => s.gps += 2 },
-                preWorkout: { name: 'Pre-Workout', desc: 'Combo multiplier +5%. Tingles mean it\'s working.', baseCost: 2500, scale: 2.2, maxLevel: 10, type: 'permanent', unlock: 1000, effect: s => s.comboBonusMultiplier += 0.05 },
+                preWorkout: { name: 'Pre-Workout', desc: 'SUPERSET tier now has a +1x multiplier bonus.', baseCost: 2500, scale: 2.2, maxLevel: 10, type: 'permanent', unlock: 1000, effect: s => CONFIG.EXERCISES.bench.tiers[0].multiplier += 1 },
                 weightBelt: { name: 'Weight Belt', desc: 'Critical Gain chance +0.2%. Protect that back!', baseCost: 1e6, scale: 5, maxLevel: 20, type: 'permanent', unlock: 5e5, effect: s => s.critChance += 0.002 },
-                superSet: { name: 'Super Set Synergy', desc: 'Clicks also grant +1% of your GPS. No rest!', baseCost: 1e8, scale: 15, maxLevel: -1, type: 'permanent', unlock: 1e7, effect: s => s.gpsBonusPerClick += 0.01 },
                 mindMuscle: { name: 'Mind-Muscle Connection', desc: 'Critical Gain damage +25%. Think about the muscle!', baseCost: 1e10, scale: 2.5, maxLevel: 20, type: 'permanent', unlock: 1e9, effect: s => s.critMultiplier += 0.25 },
-                creatineRush: { name: 'Creatine Rush', desc: 'Double Gains per click for 60s. HYDRATE!', cost: 5000, type: 'temporary', unlock: 1000, effect: applyTempBoost(2, 60000) },
-                ammoniaWhiff: { name: 'Ammonia Whiff', desc: '5x Gains per click for 10s. WAKE UP!', cost: 25000, type: 'temporary', unlock: 10000, effect: applyTempBoost(5, 10000) },
+                ammoniaWhiff: { name: 'Ammonia Whiff', desc: '5x Gains from sets and GPS for 10s. WAKE UP!', cost: 25000, type: 'temporary', unlock: 10000, effect: applyTempBoost(5, 10000) },
                 cosmeticCarbonFiberPlating: { name: 'Carbon Fiber Plating', desc: 'Equip a sleek, dark carbon fiber UI theme.', cost: 5e8, type: 'cosmetic', unlock: 1e8, maxLevel: 1 },
                 cosmeticCrimsonCore: { name: 'Crimson Core', desc: 'Overload your UI with a crimson energy theme.', cost: 1e9, type: 'cosmetic', unlock: 5e8, maxLevel: 1 },
                 cosmeticGoldStandard: { name: 'Gold Standard', desc: 'Plate everything in luxurious gold.', cost: 8e10, type: 'cosmetic', unlock: 1e10, maxLevel: 1 },
@@ -734,12 +725,13 @@ touch-action: manipulation;
         };
 
         let state = {
-            gains: 0, totalGains: 0, currentReps: 0, clickPower: 1, gps: 0, tempMultiplier: 1, owned: {}, comboCount: 0, lastClickTimestamp: 0,
-            comboBonusMultiplier: 1.0, critChance: 0, critMultiplier: 5, gpsBonusPerClick: 0, prestigePoints: 0, prestigeBoost: 1.0,
+            gains: 0, totalGains: 0, currentReps: 0, gps: 0, tempMultiplier: 1, owned: {}, 
+            critChance: 0, critMultiplier: 5, prestigePoints: 0, prestigeBoost: 1.0,
+            isSet_Active: false, isResting: false, baseReward: 1,
         };
         
         let minigame = { isActive: false, type: null, timeout: null, interval: null, cooldown: 0 };
-        let timers = { gpsInterval: null, comboTimeout: null, minigameInterval: null };
+        let timers = { gpsInterval: null, minigameInterval: null, setTimer: null, restTimer: null };
 
         function formatNumber(num) {
             if (num < 1e3) return num.toFixed(0);
@@ -751,11 +743,20 @@ touch-action: manipulation;
         function updateUI() {
             DOM.gainsDisplay.textContent = formatNumber(state.gains);
             DOM.gpsDisplay.textContent = formatNumber(state.gps * state.tempMultiplier * state.prestigeBoost);
-            DOM.repsDisplay.textContent = state.currentReps;
-            DOM.comboDisplay.textContent = state.comboCount;
-            const comboBonus = 1 + (Math.floor(state.comboCount / 10) * 0.1 * state.comboBonusMultiplier);
-            DOM.comboMeter.textContent = state.comboCount > 0 ? `x${comboBonus.toFixed(1)}` : '';
-            DOM.comboMeter.classList.toggle('visible', state.comboCount > 0);
+
+            if (state.isSet_Active) {
+                DOM.repsDisplay.textContent = state.currentReps;
+                DOM.repsLabel.textContent = 'REPS';
+            } else if (state.isResting) {
+                DOM.repsDisplay.textContent = '...';
+                DOM.repsLabel.textContent = 'RESTING';
+            } else {
+                DOM.repsDisplay.textContent = 'GO';
+                DOM.repsLabel.textContent = 'START SET';
+            }
+
+            DOM.clickerButton.disabled = state.isResting;
+            DOM.exerciseSelect.disabled = state.isSet_Active || state.isResting;
 
             const recalibrateSection = document.getElementById('recalibrate-section');
             if (state.totalGains >= 1e9) {
@@ -790,44 +791,66 @@ touch-action: manipulation;
         }
 
         function handleClick() {
-            if (minigame.isActive) return;
-            const rect = DOM.clickerButton.getBoundingClientRect();
-            const clickX = rect.left + rect.width / 2;
-            const clickY = rect.top + rect.height / 2;
-            clearTimeout(timers.comboTimeout);
-            state.comboCount++;
-            timers.comboTimeout = setTimeout(resetCombo, 1500);
-            const comboBonus = 1 + (Math.floor(state.comboCount / 10) * 0.1 * state.comboBonusMultiplier);
-            let clickValue = state.clickPower + (state.gps * state.gpsBonusPerClick);
-            let gainsGained = clickValue * state.tempMultiplier * comboBonus * state.prestigeBoost;
-            let isCrit = Math.random() < state.critChance;
-            if (isCrit) { gainsGained *= state.critMultiplier; }
-            state.gains += gainsGained;
-            state.totalGains += gainsGained;
-            state.currentReps++;
-            createVisualEffect(clickX, clickY, isCrit ? `CRITICAL GAIN! +${formatNumber(gainsGained)}` : `+${formatNumber(gainsGained)}`, isCrit ? 'var(--danger-glow)' : null, isCrit ? '2.5rem' : null);
-            createVisualEffect(clickX, clickY, null, null, null, 'shockwave');
-            updateComboRing();
-            updateUI();
-        }
+            const exercise = CONFIG.EXERCISES[DOM.exerciseSelect.value];
+            if (!exercise || exercise.type !== 'timed_taps') {
+                DOM.helperText.textContent = "This exercise isn't ready yet.";
+                return;
+            }
 
-        function resetCombo() {
-            state.comboCount = 0;
-            state.currentReps = 0; // BUG FIX: Reset reps with combo
-            updateComboRing();
-            updateUI();
-        }
-        
-        function updateComboRing() {
-            DOM.clickerProgressRing.style.transition = state.comboCount === 0 ? 'background 0.2s linear' : 'background 1.5s linear';
-            const angle = state.comboCount === 0 ? 0 : 360;
-            DOM.clickerProgressRing.style.background = `conic-gradient(var(--event-glow) ${angle}deg, transparent ${angle}deg)`;
-            if (state.comboCount > 0) {
-                void DOM.clickerProgressRing.offsetWidth;
-                DOM.clickerProgressRing.style.background = `conic-gradient(var(--event-glow) 0deg, transparent 0deg)`;
+            if (state.isSet_Active) {
+                state.currentReps++;
+                createVisualEffect(null, null, null, null, null, 'shockwave');
+                updateUI();
+            } else if (!state.isResting) {
+                // Start the set
+                state.isSet_Active = true;
+                state.currentReps = 1;
+                
+                // Animate progress ring for the duration of the set
+                DOM.clickerProgressRing.style.transition = `background ${exercise.duration / 1000}s linear`;
+                DOM.clickerProgressRing.style.background = `conic-gradient(var(--event-glow) 360deg, transparent 360deg)`;
+
+                timers.setTimer = setTimeout(() => endSet(exercise), exercise.duration);
+                updateUI();
             }
         }
         
+        function endSet(exercise) {
+            state.isSet_Active = false;
+            state.isResting = true;
+            
+            // Reset progress ring
+            DOM.clickerProgressRing.style.transition = 'background 0.2s linear';
+            DOM.clickerProgressRing.style.background = `conic-gradient(var(--event-glow) 0deg, transparent 0deg)`;
+
+            const tier = exercise.tiers.find(t => state.currentReps >= t.reps);
+            if (tier) {
+                let gainsEarned = state.baseReward * tier.multiplier;
+                if (gainsEarned > 0) {
+                    let isCrit = Math.random() < state.critChance;
+                    if (isCrit) { gainsEarned *= state.critMultiplier; }
+                    
+                    gainsEarned *= state.tempMultiplier * state.prestigeBoost;
+
+                    state.gains += gainsEarned;
+                    state.totalGains += gainsEarned;
+
+                    createVisualEffect(null, null, `${isCrit ? 'CRIT! ' : ''}${tier.label}! +${formatNumber(gainsEarned)}`, tier.color, '2.2rem');
+                } else {
+                     createVisualEffect(null, null, `${tier.label}`, tier.color, '2.2rem');
+                }
+            }
+
+            state.currentReps = 0;
+            updateUI();
+
+            // Start rest timer
+            timers.restTimer = setTimeout(() => {
+                state.isResting = false;
+                updateUI();
+            }, 2000); // 2 second rest period
+        }
+
         function calculateCost(id) {
             const item = CONFIG.SHOP_ITEMS[id];
             if (item.type === 'temporary' || item.type === 'cosmetic') return item.cost;
@@ -846,15 +869,18 @@ touch-action: manipulation;
                     item.effect(state);
                 }
                 renderShop();
-                updateUI(); // BUG FIX: Ensure UI updates immediately after purchase
+                updateUI();
             }
         }
 
         function createVisualEffect(x, y, text, color, size, type) {
             const el = document.createElement('div');
+            const rect = DOM.clickerButton.getBoundingClientRect();
+
             if (type === 'shockwave') {
                 el.className = 'shockwave';
-                el.style.left = `${x - 25}px`; el.style.top = `${y - 25}px`;
+                el.style.left = `${rect.left + rect.width / 2 - 25}px`; 
+                el.style.top = `${rect.top + rect.height / 2 - 25}px`;
                 el.style.width = '50px'; el.style.height = '50px';
             } else {
                 el.className = 'floating-text';
@@ -862,13 +888,16 @@ touch-action: manipulation;
                 el.style.color = color || 'var(--primary-glow)';
                 el.style.textShadow = `0 0 5px ${color || 'var(--primary-glow)'}`;
                 el.style.fontSize = size || '1.8rem';
-                el.style.left = `${x + (Math.random() - 0.5) * 40}px`;
-                el.style.top = `${y + (Math.random() - 0.5) * 40 - 30}px`;
+                const clickX = rect.left + rect.width / 2;
+                const clickY = rect.top + rect.height / 2;
+                el.style.left = `${clickX + (Math.random() - 0.5) * 40}px`;
+                el.style.top = `${clickY + (Math.random() - 0.5) * 40 - 30}px`;
             }
             DOM.effectsContainer.appendChild(el);
             el.addEventListener('animationend', () => el.remove());
         }
-
+        
+        // --- MINIGAME FUNCTIONS (UNCHANGED) ---
         function triggerRandomMinigame() {
             if (minigame.isActive || minigame.cooldown > 0) return;
             minigame.cooldown = 30;
@@ -1105,7 +1134,7 @@ touch-action: manipulation;
                     state.prestigeBoost = 1 + (state.prestigePoints * 0.1);
                     const cosmeticState = {};
                     for (const id in state.owned) { if (id.startsWith('cosmetic')) cosmeticState[id] = 1; }
-                    Object.assign(state, { gains: 0, totalGains: 0, currentReps: 0, clickPower: 1, gps: 0, comboCount: 0, critChance: 0, comboBonusMultiplier: 1.0, gpsBonusPerClick: 0, owned: cosmeticState });
+                    Object.assign(state, { gains: 0, totalGains: 0, currentReps: 0, gps: 0, critChance: 0, owned: cosmeticState, baseReward: 1 });
                     renderShop(); 
                     updateUI();
                  }
