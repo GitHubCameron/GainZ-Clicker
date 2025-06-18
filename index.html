@@ -735,7 +735,7 @@
                 newGymShoes: { name: 'New Gym Shoes', desc: 'Increases base Gains from Solid sets by 2.', baseCost: 150, scale: 1.8, maxLevel: -1, type: 'permanent', unlock: 100, effect: s => s.baseReward += 2 },
                 spotterBro: { name: 'Spotter Bro', desc: '+1 Gain per second. He yells "LIGHT WEIGHT!"', baseCost: 100, scale: 1.2, maxLevel: -1, type: 'permanent', unlock: 25, effect: s => s.gps++ },
                 proteinPowder: { name: 'Protein Powder', desc: '+2 Gains per second. Gotta get those macros in.', baseCost: 300, scale: 1.25, maxLevel: -1, type: 'permanent', unlock: 200, effect: s => s.gps += 2 },
-                preWorkout: { name: 'Pre-Workout', desc: 'SUPERSET tier now has a +1x multiplier bonus.', baseCost: 2500, scale: 2.2, maxLevel: 10, type: 'permanent', unlock: 1000, effect: s => {
+                preWorkout: { name: 'Pre-Workout', desc: 'Top performance tier now has a +1x multiplier bonus.', baseCost: 2500, scale: 2.2, maxLevel: 10, type: 'permanent', unlock: 1000, effect: s => {
                     Object.values(CONFIG.EXERCISES).forEach(ex => {
                         if(ex.type === 'timed_taps') ex.tiers[0].multiplier += 1;
                     });
@@ -760,6 +760,21 @@
         
         let minigame = { isActive: false, type: null, timeout: null, interval: null, cooldown: 0 };
         let timers = { gpsInterval: null, minigameInterval: null, setTimer: null, restTimer: null };
+
+        /**
+         * Triggers haptic feedback on supported devices.
+         * @param {number | number[]} pattern - The vibration pattern. e.g., 50 for 50ms, [100, 50, 100] for a pattern.
+         */
+        function triggerHaptics(pattern = 10) {
+            if ('vibrate' in navigator) {
+                try {
+                    navigator.vibrate(pattern);
+                } catch (e) {
+                    // This can happen if vibrations are disabled in user settings
+                    console.log("Haptic feedback failed.", e);
+                }
+            }
+        }
 
         function formatNumber(num) {
             if (num < 1e3) return num.toFixed(0);
@@ -826,13 +841,15 @@
             }
 
             if (state.isSet_Active) {
+                triggerHaptics(5); // Light tap for each rep
                 state.currentReps++;
                 createVisualEffect(null, null, null, null, null, 'shockwave');
                 updateUI();
             } else if (!state.isResting) {
                 // Start the set
+                triggerHaptics(50); // Heavier tap for set start
                 state.isSet_Active = true;
-                state.currentReps = 1;
+                state.currentReps = 1; // Start with 1 rep on the first click
                 
                 // Animate progress ring for the duration of the set
                 DOM.clickerProgressRing.style.transition = `background ${exercise.duration / 1000}s linear`;
@@ -844,6 +861,7 @@
         }
         
         function endSet(exercise) {
+            triggerHaptics([100, 30, 100]); // Strong double vibration for set completion
             state.isSet_Active = false;
             state.isResting = true;
             
@@ -891,6 +909,7 @@
             const isUnlocked = state.totalGains >= item.unlock;
             const isMaxed = item.maxLevel > 0 && (state.owned[id] || 0) >= item.maxLevel;
             if (state.gains >= cost && !isMaxed && isUnlocked) {
+                triggerHaptics([80, 40, 80]); // Haptic feedback for successful purchase
                 state.gains -= cost;
                 state.owned[id] = (state.owned[id] || 0) + 1;
                 if (item.effect) {
@@ -934,6 +953,7 @@
         }
 
         function startFixFormMinigame() {
+            triggerHaptics(100); // Alert for minigame start
             minigame.isActive = true;
             minigame.type = 'fixForm';
             
@@ -972,6 +992,7 @@
         }
 
         function startRerackWeightsMinigame() {
+            triggerHaptics(100); // Alert for minigame start
             minigame.isActive = true;
             minigame.type = 'rerack';
 
@@ -1225,7 +1246,22 @@
             DOM.recalibrateButton.addEventListener('click', () => {
                  const coresToGain = Math.floor(Math.cbrt(state.totalGains / 1e9));
                  if (coresToGain < 1) return;
-                 if (window.confirm(`Are you sure you want to Prestige for ${coresToGain} Prestige Points?`)) {
+                 // Custom modal instead of confirm
+                 const modal = document.createElement('div');
+                 modal.id = 'minigame-result-modal';
+                 modal.style.zIndex = '4000';
+                 modal.innerHTML = `
+                    <h2>Prestige?</h2>
+                    <p>Are you sure you want to Prestige for ${coresToGain} Prestige Points? Your progress will be reset, but you'll gain a permanent boost.</p>
+                    <div style="display: flex; justify-content: space-around;">
+                        <button id="confirm-prestige" class="buy-button">Yes, Prestige</button>
+                        <button id="cancel-prestige" class="buy-button" style="border-color: var(--danger-glow); color: var(--danger-glow);">Cancel</button>
+                    </div>
+                 `;
+                 DOM.minigameOverlayContainer.appendChild(modal);
+                 
+                 document.getElementById('confirm-prestige').onclick = () => {
+                    triggerHaptics(200); // Strong vibration for prestige
                     state.prestigePoints += coresToGain;
                     state.prestigeBoost = 1 + (state.prestigePoints * 0.1);
                     const cosmeticState = {};
@@ -1233,7 +1269,12 @@
                     Object.assign(state, { gains: 0, totalGains: 0, currentReps: 0, gps: 0, critChance: 0, owned: cosmeticState, baseReward: 1 });
                     renderShop(); 
                     updateUI();
-                 }
+                    DOM.minigameOverlayContainer.innerHTML = '';
+                 };
+
+                 document.getElementById('cancel-prestige').onclick = () => {
+                     DOM.minigameOverlayContainer.innerHTML = '';
+                 };
             });
             updateUI();
         }
