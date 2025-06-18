@@ -437,6 +437,17 @@
         @keyframes living-nexus-clicker {
             0% { background: radial-gradient(circle, #ff00ff, #00ffff, #00ffaa); } 50% { background: radial-gradient(circle, #00ffaa, #ffff00, #ff00ff); } 100% { background: radial-gradient(circle, #ff00ff, #00ffff, #00ffaa); }
         }
+        .cosmetic-golden-dumbbell #clicker-button {
+            background: radial-gradient(circle, #FFD700, #B8860B);
+            box-shadow: 0 0 25px #FFD700, inset 0 2px 5px #FFFACD, inset 0 -2px 5px rgba(0,0,0,0.6);
+            border: 2px solid #DAA520;
+            color: #4c2d00;
+        }
+        .cosmetic-golden-dumbbell #clicker-button .reps-text { text-shadow: none; }
+        .cosmetic-golden-dumbbell #clicker-button:active:not(:disabled) {
+            box-shadow: 0 0 10px #FFD700, inset 0 2px 10px #FFFACD, inset 0 -2px 5px rgba(0,0,0,0.6);
+        }
+
 
         /* --- MINIGAME STYLES --- */
         .minigame-overlay {
@@ -612,8 +623,8 @@
             <div id="shop-items-container"></div>
              <div id="recalibrate-section" style="display: none; text-align: center; margin-top: 2rem; padding: 1rem; border: 1px solid var(--danger-glow); border-radius: 8px;">
                 <h3 style="color: var(--danger-glow);">HIT A PLATEAU?</h3>
-                <p style="color: var(--text-muted); margin: 0.5rem 0; font-family: var(--font-mono); font-size: 0.8rem;">Reset your progress to earn Prestige Points, giving a permanent boost to all future Gains. It's like starting a new bulk cycle, bro.</p>
-                <p>Prestige Points to gain: <span id="recalibrate-cores" style="font-family: var(--font-title);">0</span></p>
+                <p style="color: var(--text-muted); margin: 0.5rem 0; font-family: var(--font-mono); font-size: 0.8rem;">Reset your progress to earn Prestige Cores, giving a permanent boost to all future Gains. It's like starting a new bulk cycle, bro.</p>
+                <p>Prestige Cores to gain: <span id="recalibrate-cores" style="font-family: var(--font-title);">0</span></p>
                 <button id="recalibrate-button" class="buy-button" style="border-color: var(--danger-glow); color: var(--danger-glow); margin-top: 1rem;">PRESTIGE</button>
             </div>
         </section>
@@ -733,8 +744,10 @@
             SHOP_ITEMS: {
                 liftingGrips: { name: 'Lifting Grips', desc: 'Increases base Gains from Solid sets by 1.', baseCost: 50, scale: 1.5, maxLevel: -1, type: 'permanent', unlock: 10, effect: s => s.baseReward++ },
                 newGymShoes: { name: 'New Gym Shoes', desc: 'Increases base Gains from Solid sets by 2.', baseCost: 150, scale: 1.8, maxLevel: -1, type: 'permanent', unlock: 100, effect: s => s.baseReward += 2 },
+                creatine: { name: 'Creatine', desc: 'Increases base Gains from Solid sets by 5.', baseCost: 1000, scale: 2.0, maxLevel: -1, type: 'permanent', unlock: 500, effect: s => s.baseReward += 5 },
                 spotterBro: { name: 'Spotter Bro', desc: '+1 Gain per second. He yells "LIGHT WEIGHT!"', baseCost: 100, scale: 1.2, maxLevel: -1, type: 'permanent', unlock: 25, effect: s => s.gps++ },
                 proteinPowder: { name: 'Protein Powder', desc: '+2 Gains per second. Gotta get those macros in.', baseCost: 300, scale: 1.25, maxLevel: -1, type: 'permanent', unlock: 200, effect: s => s.gps += 2 },
+                autoClickerArm: { name: 'Auto-Clicker Arm', desc: '+5 Gains per second. It\'s just an advanced machine.', baseCost: 1000, scale: 1.3, maxLevel: -1, type: 'permanent', unlock: 800, effect: s => s.gps += 5 },
                 preWorkout: { name: 'Pre-Workout', desc: 'Top performance tier now has a +1x multiplier bonus.', baseCost: 2500, scale: 2.2, maxLevel: 10, type: 'permanent', unlock: 1000, effect: s => {
                     Object.values(CONFIG.EXERCISES).forEach(ex => {
                         if(ex.type === 'timed_taps') ex.tiers[0].multiplier += 1;
@@ -742,10 +755,13 @@
                 } },
                 weightBelt: { name: 'Weight Belt', desc: 'Critical Gain chance +0.2%. Protect that back!', baseCost: 1e6, scale: 5, maxLevel: 20, type: 'permanent', unlock: 5e5, effect: s => s.critChance += 0.002 },
                 mindMuscle: { name: 'Mind-Muscle Connection', desc: 'Critical Gain damage +25%. Think about the muscle!', baseCost: 1e10, scale: 2.5, maxLevel: 20, type: 'permanent', unlock: 1e9, effect: s => s.critMultiplier += 0.25 },
+                anabolicChicken: { name: 'Anabolic Chicken', desc: 'Each rep has a 0.5% chance to grant 1% of your total lifetime Gains.', baseCost: 5e12, scale: 2, maxLevel: 5, type: 'permanent', unlock: 1e12, effect: s => {} }, // Effect is handled in handleClick
                 ammoniaWhiff: { name: 'Ammonia Whiff', desc: '5x Gains from sets and GPS for 10s. WAKE UP!', cost: 25000, type: 'temporary', unlock: 10000, effect: applyTempBoost(5, 10000) },
+                gymMembership: { name: 'Gym Membership', desc: 'Unlocks new exercises. Squats are now available!', cost: 1e7, type: 'permanent', unlock: 5e6, maxLevel: 1, effect: () => { renderExercises(); } },
                 cosmeticCarbonFiberPlating: { name: 'Carbon Fiber Plating', desc: 'Equip a sleek, dark carbon fiber UI theme.', cost: 5e8, type: 'cosmetic', unlock: 1e8, maxLevel: 1 },
                 cosmeticCrimsonCore: { name: 'Crimson Core', desc: 'Overload your UI with a crimson energy theme.', cost: 1e9, type: 'cosmetic', unlock: 5e8, maxLevel: 1 },
                 cosmeticGoldStandard: { name: 'Gold Standard', desc: 'Plate everything in luxurious gold.', cost: 8e10, type: 'cosmetic', unlock: 1e10, maxLevel: 1 },
+                cosmeticGoldenDumbbell: { name: 'Golden Dumbbell', desc: 'Equip a solid gold dumbbell as your clicker.', cost: 2e11, type: 'cosmetic', unlock: 1e11, maxLevel: 1 },
                 cosmeticHolographicInterface: { name: 'Holographic Interface', desc: 'Upgrade to a glitchy, holographic UI.', cost: 5e11, type: 'cosmetic', unlock: 8e10, maxLevel: 1 },
                 cosmeticCelestialForm: { name: 'Celestial Form', desc: 'Become one with the cosmos. A starry theme.', cost: 1e12, type: 'cosmetic', unlock: 5e11, maxLevel: 1 },
                 cosmeticLivingNexus: { name: 'Living Nexus', desc: 'The ultimate theme. Your UI becomes sentient.', cost: 1e15, type: 'cosmetic', unlock: 1e14, maxLevel: 1 },
@@ -759,7 +775,7 @@
         };
         
         let minigame = { isActive: false, type: null, timeout: null, interval: null, cooldown: 0 };
-        let timers = { gpsInterval: null, minigameInterval: null, setTimer: null, restTimer: null };
+        let timers = { gpsInterval: null, minigameInterval: null, setTimer: null, restTimer: null, saveInterval: null };
 
         /**
          * Triggers haptic feedback on supported devices.
@@ -781,6 +797,27 @@
             const suffixes = ["", "K", "M", "B", "T", "Qa"];
             const i = Math.floor(Math.log10(num) / 3);
             return (num / Math.pow(1000, i)).toFixed(2) + suffixes[i];
+        }
+        
+        function saveState() {
+            try {
+                const stateToSave = JSON.stringify(state);
+                localStorage.setItem('gainzClickerSaveData', stateToSave);
+            } catch (e) {
+                console.error("Could not save game state:", e);
+            }
+        }
+
+        function loadState() {
+            try {
+                const savedStateJSON = localStorage.getItem('gainzClickerSaveData');
+                if (savedStateJSON) {
+                    const loadedState = JSON.parse(savedStateJSON);
+                    Object.assign(state, loadedState);
+                }
+            } catch (e) {
+                console.error("Could not load game state:", e);
+            }
         }
 
         function updateUI() {
@@ -830,7 +867,7 @@
                      break;
                 }
             }
-            DOM.appContainer.className = appliedCosmetic;
+            DOM.appContainer.className = 'app-container ' + appliedCosmetic;
         }
 
         function handleClick() {
@@ -843,6 +880,19 @@
             if (state.isSet_Active) {
                 triggerHaptics(5); // Light tap for each rep
                 state.currentReps++;
+
+                if ((state.owned.anabolicChicken || 0) > 0) {
+                    const chickenChance = 0.005 * (state.owned.anabolicChicken || 0);
+                    if (Math.random() < chickenChance) {
+                        const bonusGains = state.totalGains * 0.01;
+                        if (bonusGains > 0) {
+                            state.gains += bonusGains;
+                            state.totalGains += bonusGains;
+                            createVisualEffect(null, null, `+${formatNumber(bonusGains)}!`, '#FFD700', '2rem');
+                        }
+                    }
+                }
+
                 createVisualEffect(null, null, null, null, null, 'shockwave');
                 updateUI();
             } else if (!state.isResting) {
@@ -899,7 +949,7 @@
 
         function calculateCost(id) {
             const item = CONFIG.SHOP_ITEMS[id];
-            if (item.type === 'temporary' || item.type === 'cosmetic') return item.cost;
+            if (item.type === 'temporary' || item.type === 'cosmetic' || item.maxLevel === 1) return item.cost;
             return Math.ceil(item.baseCost * Math.pow(item.scale, state.owned[id] || 0));
         }
 
@@ -1222,13 +1272,34 @@
             updateUI();
         }
 
-        function init() {
+        function renderExercises() {
+            const currentExercise = DOM.exerciseSelect.value;
+            DOM.exerciseSelect.innerHTML = ''; // Clear existing options
             for (const key in CONFIG.EXERCISES) {
+                 if (key === 'squats' && !(state.owned.gymMembership > 0)) {
+                    continue; 
+                }
                 const option = document.createElement('option');
-                option.value = key; option.textContent = CONFIG.EXERCISES[key].name;
+                option.value = key; 
+                option.textContent = CONFIG.EXERCISES[key].name;
                 DOM.exerciseSelect.appendChild(option);
             }
+            // Preserve the selected exercise if it still exists
+            if (DOM.exerciseSelect.querySelector(`option[value="${currentExercise}"]`)) {
+                 DOM.exerciseSelect.value = currentExercise;
+            }
+        }
+
+        function init() {
+            loadState();
+            
+            renderExercises();
             renderShop();
+
+            if (timers.gpsInterval) clearInterval(timers.gpsInterval);
+            if (timers.minigameInterval) clearInterval(timers.minigameInterval);
+            if (timers.saveInterval) clearInterval(timers.saveInterval);
+
             timers.gpsInterval = setInterval(() => {
                 const gainsGained = state.gps * state.tempMultiplier * state.prestigeBoost;
                 if (gainsGained > 0) {
@@ -1239,10 +1310,17 @@
                 updateUI();
             }, 1000);
             timers.minigameInterval = setInterval(triggerRandomMinigame, 20000); // Check every 20 seconds
+            timers.saveInterval = setInterval(saveState, 5000); // Save every 5 seconds
+
             DOM.clickerButton.addEventListener('mousedown', handleClick);
             DOM.navGame.addEventListener('click', () => { DOM.gameArea.classList.add('active-view'); DOM.shopArea.classList.remove('active-view'); DOM.navGame.classList.add('active'); DOM.navShop.classList.remove('active'); });
             DOM.navShop.addEventListener('click', () => { DOM.gameArea.classList.remove('active-view'); DOM.shopArea.classList.add('active-view'); DOM.navGame.classList.remove('active'); DOM.navShop.classList.add('active'); renderShop(); });
-            DOM.shopItemsContainer.addEventListener('click', e => { if (e.target.matches('.buy-button')) { buyItem(e.target.dataset.id); }});
+            DOM.shopItemsContainer.addEventListener('click', e => { 
+                if (e.target.matches('.buy-button')) { 
+                    buyItem(e.target.dataset.id); 
+                    saveState();
+                }
+            });
             DOM.recalibrateButton.addEventListener('click', () => {
                  const coresToGain = Math.floor(Math.cbrt(state.totalGains / 1e9));
                  if (coresToGain < 1) return;
@@ -1252,7 +1330,7 @@
                  modal.style.zIndex = '4000';
                  modal.innerHTML = `
                     <h2>Prestige?</h2>
-                    <p>Are you sure you want to Prestige for ${coresToGain} Prestige Points? Your progress will be reset, but you'll gain a permanent boost.</p>
+                    <p>Are you sure you want to Prestige for ${coresToGain} Prestige Cores? Your progress will be reset, but you'll gain a permanent boost.</p>
                     <div style="display: flex; justify-content: space-around;">
                         <button id="confirm-prestige" class="buy-button">Yes, Prestige</button>
                         <button id="cancel-prestige" class="buy-button" style="border-color: var(--danger-glow); color: var(--danger-glow);">Cancel</button>
@@ -1268,7 +1346,9 @@
                     for (const id in state.owned) { if (id.startsWith('cosmetic')) cosmeticState[id] = 1; }
                     Object.assign(state, { gains: 0, totalGains: 0, currentReps: 0, gps: 0, critChance: 0, owned: cosmeticState, baseReward: 1 });
                     renderShop(); 
+                    renderExercises();
                     updateUI();
+                    saveState();
                     DOM.minigameOverlayContainer.innerHTML = '';
                  };
 
