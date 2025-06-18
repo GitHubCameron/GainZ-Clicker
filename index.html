@@ -512,11 +512,12 @@
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            position: relative;
+            height: 300px; /* Give it a defined height */
+            width: 80px;
         }
         
         .weight-plate {
-            width: 60px;
-            height: 60px;
             border-radius: 50%;
             display: flex;
             justify-content: center;
@@ -524,13 +525,18 @@
             font-weight: 900;
             cursor: grab;
             user-select: none;
-            position: relative;
+            position: absolute; /* Changed to absolute */
+            touch-action: none; /* Important for touch devices */
         }
-        .weight-plate.dragging { opacity: 0.5; cursor: grabbing; }
+        .weight-plate.dragging { 
+            opacity: 0.7; 
+            cursor: grabbing;
+            z-index: 2005; /* Make sure it's on top */
+        }
 
-        .plate-45 { background-color: #B22222; width: 80px; height: 80px;}
-        .plate-25 { background-color: #006400; width: 70px; height: 70px;}
-        .plate-10 { background-color: #4682B4; }
+        .plate-45 { background-color: #B22222; width: 80px; height: 80px; top: 100px;}
+        .plate-25 { background-color: #006400; width: 70px; height: 70px; top: 190px;}
+        .plate-10 { background-color: #4682B4; width: 60px; height: 60px; top: 20px;}
         
         .drop-zone {
             position: absolute;
@@ -703,15 +709,37 @@
                         { reps: 0, label: 'BAD FORM', multiplier: 0, color: 'var(--danger-glow)' }
                     ]
                 },
-                curls: { name: 'Bicep Curls', type: 'inactive' }, 
-                squats: { name: 'Heavy Squats', type: 'inactive' } 
+                curls: { 
+                    name: 'Bicep Curls',
+                    type: 'timed_taps',
+                    duration: 7000, // 7 seconds
+                    tiers: [
+                        { reps: 25, label: 'PUMPED', multiplier: 1.5, color: 'var(--event-glow)'},
+                        { reps: 12, label: 'GOOD FORM', multiplier: 0.8, color: 'var(--primary-glow)' },
+                        { reps: 0, label: 'EGO LIFT', multiplier: 0, color: 'var(--danger-glow)' }
+                    ]
+                }, 
+                squats: { 
+                    name: 'Heavy Squats',
+                    type: 'timed_taps',
+                    duration: 12000, // 12 seconds
+                    tiers: [
+                        { reps: 40, label: 'BEAST MODE', multiplier: 3, color: 'var(--event-glow)'},
+                        { reps: 20, label: 'DEEP REP', multiplier: 1.5, color: 'var(--primary-glow)' },
+                        { reps: 0, label: 'SNAP CITY', multiplier: 0, color: 'var(--danger-glow)' }
+                    ]
+                } 
             },
             SHOP_ITEMS: {
                 liftingGrips: { name: 'Lifting Grips', desc: 'Increases base Gains from Solid sets by 1.', baseCost: 50, scale: 1.5, maxLevel: -1, type: 'permanent', unlock: 10, effect: s => s.baseReward++ },
                 newGymShoes: { name: 'New Gym Shoes', desc: 'Increases base Gains from Solid sets by 2.', baseCost: 150, scale: 1.8, maxLevel: -1, type: 'permanent', unlock: 100, effect: s => s.baseReward += 2 },
                 spotterBro: { name: 'Spotter Bro', desc: '+1 Gain per second. He yells "LIGHT WEIGHT!"', baseCost: 100, scale: 1.2, maxLevel: -1, type: 'permanent', unlock: 25, effect: s => s.gps++ },
                 proteinPowder: { name: 'Protein Powder', desc: '+2 Gains per second. Gotta get those macros in.', baseCost: 300, scale: 1.25, maxLevel: -1, type: 'permanent', unlock: 200, effect: s => s.gps += 2 },
-                preWorkout: { name: 'Pre-Workout', desc: 'SUPERSET tier now has a +1x multiplier bonus.', baseCost: 2500, scale: 2.2, maxLevel: 10, type: 'permanent', unlock: 1000, effect: s => CONFIG.EXERCISES.bench.tiers[0].multiplier += 1 },
+                preWorkout: { name: 'Pre-Workout', desc: 'SUPERSET tier now has a +1x multiplier bonus.', baseCost: 2500, scale: 2.2, maxLevel: 10, type: 'permanent', unlock: 1000, effect: s => {
+                    Object.values(CONFIG.EXERCISES).forEach(ex => {
+                        if(ex.type === 'timed_taps') ex.tiers[0].multiplier += 1;
+                    });
+                } },
                 weightBelt: { name: 'Weight Belt', desc: 'Critical Gain chance +0.2%. Protect that back!', baseCost: 1e6, scale: 5, maxLevel: 20, type: 'permanent', unlock: 5e5, effect: s => s.critChance += 0.002 },
                 mindMuscle: { name: 'Mind-Muscle Connection', desc: 'Critical Gain damage +25%. Think about the muscle!', baseCost: 1e10, scale: 2.5, maxLevel: 20, type: 'permanent', unlock: 1e9, effect: s => s.critMultiplier += 0.25 },
                 ammoniaWhiff: { name: 'Ammonia Whiff', desc: '5x Gains from sets and GPS for 10s. WAKE UP!', cost: 25000, type: 'temporary', unlock: 10000, effect: applyTempBoost(5, 10000) },
@@ -897,13 +925,12 @@
             el.addEventListener('animationend', () => el.remove());
         }
         
-        // --- MINIGAME FUNCTIONS (UNCHANGED) ---
         function triggerRandomMinigame() {
-            if (minigame.isActive || minigame.cooldown > 0) return;
-            minigame.cooldown = 30;
+            if (minigame.isActive || state.isSet_Active || state.isResting || minigame.cooldown > 0) return;
+            minigame.cooldown = 30; // seconds
             const roll = Math.random();
-            if (roll < 0.3) startFixFormMinigame();
-            else if (roll < 0.6) startRerackWeightsMinigame();
+            if (roll < 0.3) { startFixFormMinigame(); }
+            else if (roll < 0.6) { startRerackWeightsMinigame(); }
         }
 
         function startFixFormMinigame() {
@@ -954,9 +981,9 @@
                 <div class="minigame-timer" id="rerack-timer">10</div>
                 <div id="rerack-weights-container">
                     <div class="weight-plates-source">
-                        <div class="weight-plate plate-10" draggable="true" data-weight="10">10</div>
-                        <div class="weight-plate plate-45" draggable="true" data-weight="45">45</div>
-                        <div class="weight-plate plate-25" draggable="true" data-weight="25">25</div>
+                        <div class="weight-plate plate-10" data-weight="10">10</div>
+                        <div class="weight-plate plate-45" data-weight="45">45</div>
+                        <div class="weight-plate plate-25" data-weight="25">25</div>
                     </div>
                     <div id="weight-tree">
                         <div class="weight-peg weight-peg-1"></div>
@@ -976,73 +1003,142 @@
                 timerEl.textContent = timeLeft;
                 if (timeLeft <= 0) {
                     clearInterval(minigame.interval);
-                    endRerackWeightsMinigame(false);
+                    if(minigame.isActive) endRerackWeightsMinigame(false);
                 }
             }, 1000);
             
-            setupDragAndDrop();
+            setupTouchAndMouseDrag();
         }
 
         function endRerackWeightsMinigame(success) {
+            if (!minigame.isActive) return;
             clearInterval(minigame.interval);
-            DOM.minigameOverlayContainer.innerHTML = '';
             minigame.isActive = false;
+
             let title, message;
             if (success) {
                 title = "GYM ETIQUETTE 101";
-                const reward = state.gps * 1800;
+                const reward = (state.gps > 0 ? state.gps : 10) * 60; // Reward based on GPS or a flat 10 if GPS is 0
                 state.gains += reward;
+                state.totalGains += reward;
                 message = `You reracked the weights like a pro! Gained ${formatNumber(reward)}!`;
             } else {
                 title = "Sloppy!";
                 message = "You left the weights on the floor! No bonus gains.";
             }
-            showResultModal(title, message);
+            
+            // Wait a moment before showing the modal to prevent it from disappearing instantly
+            setTimeout(() => {
+                DOM.minigameOverlayContainer.innerHTML = '';
+                showResultModal(title, message);
+            }, 100);
         }
 
-        function setupDragAndDrop() {
+        function setupTouchAndMouseDrag() {
             const plates = document.querySelectorAll('.weight-plate');
-            const dropZones = document.querySelectorAll('.drop-zone');
+            const dropZones = Array.from(document.querySelectorAll('.drop-zone'));
+            const container = document.querySelector('.minigame-overlay');
             let draggedItem = null;
             let correctPlacements = 0;
+            let offsetX = 0, offsetY = 0;
 
-            plates.forEach(plate => {
-                plate.addEventListener('dragstart', e => {
-                    draggedItem = e.target;
-                    setTimeout(() => e.target.classList.add('dragging'), 0);
-                });
-                plate.addEventListener('dragend', () => {
-                    draggedItem.classList.remove('dragging');
-                    draggedItem = null;
-                });
-            });
+            const onDragStart = (e) => {
+                const target = e.target.closest('.weight-plate');
+                if (!target || target.hasAttribute('data-locked')) return;
+                
+                e.preventDefault();
+                draggedItem = target;
+                draggedItem.classList.add('dragging');
 
-            dropZones.forEach(zone => {
-                zone.addEventListener('dragover', e => e.preventDefault());
-                zone.addEventListener('dragenter', e => { e.preventDefault(); e.target.classList.add('hover'); });
-                zone.addEventListener('dragleave', e => e.target.classList.remove('hover'));
-                zone.addEventListener('drop', e => {
-                    e.target.classList.remove('hover');
-                    if (draggedItem && e.target.dataset.target === draggedItem.dataset.weight) {
-                        e.target.appendChild(draggedItem);
-                        draggedItem.style.position = 'absolute';
-                        draggedItem.style.top = '0';
-                        draggedItem.style.left = '0';
-                        draggedItem.setAttribute('draggable', 'false');
+                const rect = draggedItem.getBoundingClientRect();
+                const pointer = e.type === 'touchstart' ? e.touches[0] : e;
+                offsetX = pointer.clientX - rect.left;
+                offsetY = pointer.clientY - rect.top;
+                
+                // Move item to overlay to ensure it's rendered on top
+                container.appendChild(draggedItem);
+                draggedItem.style.position = 'absolute';
+                onDragMove(e); // Initial position update
+
+                document.addEventListener('mousemove', onDragMove);
+                document.addEventListener('touchmove', onDragMove, { passive: false });
+                document.addEventListener('mouseup', onDragEnd);
+                document.addEventListener('touchend', onDragEnd);
+            };
+
+            const onDragMove = (e) => {
+                if (!draggedItem) return;
+                e.preventDefault();
+
+                const pointer = e.type === 'touchmove' ? e.touches[0] : e;
+                draggedItem.style.left = `${pointer.clientX - offsetX}px`;
+                draggedItem.style.top = `${pointer.clientY - offsetY}px`;
+
+                dropZones.forEach(zone => {
+                    if (isOverlapping(draggedItem, zone)) {
+                        zone.classList.add('hover');
+                    } else {
+                        zone.classList.remove('hover');
+                    }
+                });
+            };
+
+            const onDragEnd = () => {
+                if (!draggedItem) return;
+                let dropped = false;
+                for (const zone of dropZones) {
+                    zone.classList.remove('hover');
+                    if (isOverlapping(draggedItem, zone) && zone.dataset.target === draggedItem.dataset.weight) {
+                        const zoneRect = zone.getBoundingClientRect();
+                        const containerRect = container.getBoundingClientRect();
+                        draggedItem.style.left = `${zoneRect.left - containerRect.left}px`;
+                        draggedItem.style.top = `${zoneRect.top - containerRect.top}px`;
+                        
+                        draggedItem.setAttribute('data-locked', 'true');
+                        draggedItem.classList.remove('dragging');
                         correctPlacements++;
+                        dropped = true;
                         if (correctPlacements === 3) {
                             endRerackWeightsMinigame(true);
                         }
+                        break;
                     }
-                });
+                }
+
+                if (!dropped) {
+                    // Return to original container if not dropped correctly
+                    const sourceContainer = document.querySelector('.weight-plates-source');
+                    sourceContainer.appendChild(draggedItem);
+                    draggedItem.style.position = 'absolute'; // Keep it absolute within the source
+                    draggedItem.style.left = ''; // Reset inline style
+                    draggedItem.style.top = ''; // Reset inline style
+                }
+                
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+                document.removeEventListener('mousemove', onDragMove);
+                document.removeEventListener('touchmove', onDragMove);
+                document.removeEventListener('mouseup', onDragEnd);
+                document.removeEventListener('touchend', onDragEnd);
+            };
+            
+            plates.forEach(plate => {
+                plate.addEventListener('mousedown', onDragStart);
+                plate.addEventListener('touchstart', onDragStart, { passive: false });
             });
         }
         
+        function isOverlapping(el1, el2) {
+            const rect1 = el1.getBoundingClientRect();
+            const rect2 = el2.getBoundingClientRect();
+            return !(rect1.right < rect2.left || rect1.left > rect2.right || rect1.bottom < rect2.top || rect1.top > rect2.bottom);
+        }
+
         function showResultModal(title, message) {
             const modal = document.createElement('div');
             modal.id = 'minigame-result-modal';
             modal.innerHTML = `
-                <h2 style="color: var(--${title.includes('!') ? 'danger' : 'primary'}-glow);">${title}</h2>
+                <h2 style="color: var(--${title.toLowerCase().includes('sloppy') ? 'danger' : 'primary'}-glow);">${title}</h2>
                 <p>${message}</p>
                 <button class="buy-button">Awesome</button>
             `;
@@ -1121,7 +1217,7 @@
                 if (minigame.cooldown > 0) minigame.cooldown--;
                 updateUI();
             }, 1000);
-            timers.minigameInterval = setInterval(triggerRandomMinigame, 20000); // Check every 20 seconds for demo
+            timers.minigameInterval = setInterval(triggerRandomMinigame, 20000); // Check every 20 seconds
             DOM.clickerButton.addEventListener('mousedown', handleClick);
             DOM.navGame.addEventListener('click', () => { DOM.gameArea.classList.add('active-view'); DOM.shopArea.classList.remove('active-view'); DOM.navGame.classList.add('active'); DOM.navShop.classList.remove('active'); });
             DOM.navShop.addEventListener('click', () => { DOM.gameArea.classList.remove('active-view'); DOM.shopArea.classList.add('active-view'); DOM.navGame.classList.remove('active'); DOM.navShop.classList.add('active'); renderShop(); });
